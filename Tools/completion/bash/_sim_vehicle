@@ -5,6 +5,8 @@ _sim_vehicle() {
   COMPREPLY=()
   cur="${COMP_WORDS[COMP_CWORD]}"
   prev="${COMP_WORDS[COMP_CWORD - 1]}"
+  # don't complet =
+  _init_completion -n = || return
 
   # TODO: generate for waf help
   opts="--help -h"
@@ -64,7 +66,6 @@ _sim_vehicle() {
   -v | --vehicle)
     # get the calling program, remove anything after the space == all commands arguments
     local caller; caller=$(echo $@ | sed 's/ .*//g');
-    # get options between "vehicle type " and closing ")", remove line return, remove spaces, anything before the opening (, remove the "|" and closing ")"
     opts=$($caller --list-vehicle)
     COMPREPLY=($(compgen -W "${opts}" -- ${cur}))
     return 0
@@ -72,8 +73,7 @@ _sim_vehicle() {
   -f | --frame)
     # get the calling program, remove anything after the space == all commands arguments
     local caller; caller=$(echo $@ | sed 's/ .*//g');
-    # Get everything between "frame type" and "-C", remove first and last line, get line starting with caracters and ": " sequence, remove spaces and :
-    local supported_vehicle_list=$($caller --help | sed -n '/frame type/,/-C/p' | sed -e '1d' -e '$d' | sed  -n 's/\(.*: \).*/\1/p' | sed -e 's/ //g' -e 's/://g')
+    local supported_vehicle_list=$($caller --list-vehicle)
     local frames;
     for v in $supported_vehicle_list
     do
@@ -89,7 +89,8 @@ _sim_vehicle() {
     ;;
   esac
 
-  COMPREPLY=($(compgen -W "${opts}" -- ${cur}))
+  COMPREPLY=( $(compgen -W '$(_parse_help "$1")' -- "$cur") $(compgen -W "${opts}" -- ${cur}) )
+  [[ ${COMPREPLY-} == *= ]] && compopt -o nospace
 }
 
 complete -F _sim_vehicle sim_vehicle.py
