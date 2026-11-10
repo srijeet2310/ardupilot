@@ -144,7 +144,7 @@ TEST(Polygon, complex)
         {1.5f, 6.5f},
     };
 
-    Vector2f closed_poly[sizeof(poly) + sizeof(Vector2f)];
+    Vector2f closed_poly[ARRAY_SIZE(poly) + 1];
     memcpy(closed_poly, poly, sizeof(poly));
     const uint16_t n = ARRAY_SIZE(closed_poly);
     closed_poly[n-1] = closed_poly[0];
@@ -175,6 +175,25 @@ TEST(Polygon, circle_outside_square)
         EXPECT_EQ(Polygon_outside(Vector2f{x,y}, square_closed, 3),
                   Polygon_outside(Vector2f{x,y}, square_closed, 4));
     }
+}
+
+TEST(Polygon, closest_distance_line_wraps_closing_edge)
+{
+    // unclosed representation (4 points, no duplicated closing vertex), as
+    // stored by AC_PolyFence_loader for a real inclusion/exclusion fence
+    const Vector2f square[] = {{0.0f,0.0f}, {0.0f,10.0f}, {10.0f,10.0f}, {10.0f,0.0f}};
+
+    // query segment just below the polygon's closing edge V[3]->V[0]
+    const float dist_below = Polygon_closest_distance_line(square, 4, Vector2f{3.0f,-1.0f}, Vector2f{7.0f,-1.0f});
+    // true perpendicular distance to that edge is 1.0; before the fix this
+    // edge was never tested and the function returned sqrtf(10) instead,
+    // incorrectly reporting a much larger clearance
+    EXPECT_NEAR(1.0f, dist_below, 1.0e-3f);
+
+    // sanity check: a query near the top edge (unaffected by the missing
+    // wrap-around) must still return the same correct answer
+    const float dist_above = Polygon_closest_distance_line(square, 4, Vector2f{3.0f,11.0f}, Vector2f{7.0f,11.0f});
+    EXPECT_NEAR(1.0f, dist_above, 1.0e-3f);
 }
 
 struct PB_long {
@@ -317,7 +336,6 @@ static const Vector2f PROX_boundary[] = {
     // closing point so we can call Polygon_outside(...):
     Vector2f{938.315063f,388.662872f},
 };
-
 
 static const struct {
     Vector2f point;

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Install dependencies and configure the environment for CI build testing
 
 set -ex
@@ -6,11 +6,14 @@ set -ex
 # Disable ccache for the configure phase, it's not worth it
 export CCACHE_DISABLE="true"
 
-ARM_ROOT="gcc-arm-none-eabi-6-2017-q2-update"
-ARM_TARBALL="$ARM_ROOT-linux.tar.bz2"
+ARM_ROOT="gcc-arm-none-eabi-10-2020-q4-major"
+ARM_TARBALL="$ARM_ROOT-x86_64-linux.tar.bz2"
 
 RPI_ROOT="master"
 RPI_TARBALL="$RPI_ROOT.tar.gz"
+
+MUSL_ROOT="arm-linux-musleabihf-cross"
+MUSL_TBZ="$MUSL_ROOT.tgz"
 
 CCACHE_ROOT="ccache-3.4.2"
 CCACHE_TARBALL="$CCACHE_ROOT.tar.bz2"
@@ -30,6 +33,13 @@ dir="tools-master/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64"
 if [ ! -d "$HOME/opt/$dir" -o ! -x "$HOME/opt/$dir/bin/arm-linux-gnueabihf-g++" ]; then
   wget https://firmware.ardupilot.org/Tools/Travis/NavIO/$RPI_TARBALL
   tar -xf $RPI_TARBALL -C opt $dir
+fi
+
+# musl toolchain
+dir=$MUSL_ROOT
+if [ ! -d "$HOME/opt/$dir" -o ! -x "$HOME/opt/$dir/bin/arm-linux-musleabihf-g++" ]; then
+  wget https://musl.cc/$MUSL_TBZ
+  tar -xf $MUSL_TBZ -C opt
 fi
 
 # ccache
@@ -65,14 +75,17 @@ ln -s ~/opt/$CCACHE_ROOT/ccache ~/ccache/arm-none-eabi-g++
 ln -s ~/opt/$CCACHE_ROOT/ccache ~/ccache/arm-none-eabi-gcc
 ln -s ~/opt/$CCACHE_ROOT/ccache ~/ccache/arm-linux-gnueabihf-g++
 ln -s ~/opt/$CCACHE_ROOT/ccache ~/ccache/arm-linux-gnueabihf-gcc
+ln -s ~/opt/$CCACHE_ROOT/ccache ~/ccache/arm-linux-musleabihf-gcc
+ln -s ~/opt/$CCACHE_ROOT/ccache ~/ccache/arm-linux-musleabihf-g++
 ln -s ~/opt/$CCACHE_ROOT/ccache ~/ccache/clang++
 ln -s ~/opt/$CCACHE_ROOT/ccache ~/ccache/clang
 
 exportline="export PATH=$HOME/ccache"
 exportline="${exportline}:$HOME/bin"
 exportline="${exportline}:$HOME/.local/bin"
-exportline="${exportline}:$HOME/opt/gcc-arm-none-eabi-6-2017-q2-update/bin"
+exportline="${exportline}:$HOME/opt/gcc-arm-none-eabi-10-2020-q4-major/bin"
 exportline="${exportline}:$HOME/opt/tools-master/arm-bcm2708/gcc-linaro-arm-linux-gnueabihf-raspbian-x64/bin"
+exportline="${exportline}:$HOME/opt/arm-linux-musleabihf-cross/bin"
 exportline="${exportline}:$HOME/opt/$CCACHE_ROOT"
 exportline="${exportline}:\$PATH"
 
@@ -84,8 +97,8 @@ fi
 
 . ~/.profile
 
-pip install --user -U argparse empy pyserial pexpect future lxml
-pip install --user -U intelhex
-pip install --user -U numpy
-pip install --user -U edn_format
-
+python3 -m pip install --progress-bar off --user -U argparse pyserial pexpect lxml
+python3 -m pip install --progress-bar off --user -U intelhex
+python3 -m pip install --progress-bar off --user -U numpy
+python3 -m pip install --progress-bar off --user -U edn_format
+python3 -m pip install --progress-bar off --user -U empy==3.3.4
